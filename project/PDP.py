@@ -18,8 +18,6 @@ df = pd.read_csv(data_file, delimiter=',',
                           'religiousness','education','occupation','rating'],
                  converters={'children': lambda s: True if s == "yes" else False})
 
-train_percentage = 0.8
-
 def main():
     # ommit gender and children (as does the reference paper)
     X = df[["yearsmarried","age","religiousness","occupation","rating"]].values
@@ -30,41 +28,33 @@ def main():
     X = X[order]
     y = y[order]
 
-    # split train/test
-    cutoff_idx = int(train_percentage * y.shape[0])
-    X_train = X[0:cutoff_idx, :]
-    X_test  = X[cutoff_idx:, :]
-    y_train = y[0:cutoff_idx]
-    y_test  = y[cutoff_idx:]
-
 
     names = ["yearsmarried","age","religiousness","occupation","rating"]
 
-    print(names)
-    print("Training GBRT...")
+    print("features to be plotted on first graph: " + str(names))
     clf = GradientBoostingRegressor(n_estimators=100, max_depth=4,
                                     learning_rate=0.1, loss='huber',
                                     random_state=1)
-    clf.fit(X_train, y_train)
-    print(" done.")
+    clf.fit(X, y)
 
     print('Convenience plot with ``partial_dependence_plots``')
 
     # features = [0, 5, 1, 2, (5, 1)]
     features = [0,1,2,3,4,(0,1)]
-    fig, axs = plot_partial_dependence(clf, X_train, features,
+    fig, axs = plot_partial_dependence(clf, X, features,
                                        feature_names=names,
-                                       n_jobs=3, grid_resolution=50)
+                                       n_jobs=-1, grid_resolution=100, n_cols=3)
+    fig.set_size_inches(10.5, 7.5)
     fig.suptitle('Partial dependence for amount of affairs\n'
                  'for the Affairs dataset.')
-    plt.subplots_adjust(top=0.9)  # tight_layout causes overlap with suptitle
+    plt.subplots_adjust(top=0.9)  # tight_layout causes overlap
 
     print('Custom 3d plot via ``partial_dependence``')
     fig = plt.figure()
 
     target_feature = (0, 1)
     pdp, axes = partial_dependence(clf, target_feature,
-                                   X=X_train, grid_resolution=50)
+                                   X=X, grid_resolution=100)
     XX, YY = np.meshgrid(axes[0], axes[1])
     Z = pdp[0].reshape(list(map(np.size, axes))).T
     ax = Axes3D(fig)
@@ -77,12 +67,12 @@ def main():
     ax.view_init(elev=22, azim=122)
     plt.colorbar(surf)
     plt.suptitle('Partial dependence of amount of affairs\n'
-                 ' for the amount of years married and the age.')
+                 'for the amount of years married and the age.')
     plt.subplots_adjust(top=0.9)
 
     plt.show()
 
 
-# Needed on Windows because plot_partial_dependence uses multiprocessing
+# Necessary on Windows because plot_partial_dependence uses multiprocessing
 if __name__ == '__main__':
     main()
